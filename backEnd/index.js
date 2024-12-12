@@ -2,6 +2,7 @@ require('dotenv').config()
 
 const express = require('express');
 const cors = require("cors");
+const bodyParser = require('body-parser');
 const app = express();
 const connectToMongo = require('./connection/connection.js')
 require('dotenv').config()
@@ -21,6 +22,9 @@ const cvFormRouter = require('./Router/cvFormRouter.js')
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended:true }));
+// Middleware to parse JSON bodies
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 // Route to handle POST requests for contact
 app.post("/contact", contactRouter); 
@@ -48,7 +52,8 @@ app.use('/',courseRoutes)
 
 // Use the job application routes
 app.use('/cvForm', cvFormRouter);
-
+// Serve static files
+app.use('/uploads', express.static('uploads'));
 
 // for testing 
 app.get('/test', (req, res) => {
