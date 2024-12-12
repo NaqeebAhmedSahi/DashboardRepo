@@ -2,7 +2,7 @@ import { useState } from "react";
 import { v4 as uuidv4 } from 'uuid';
 import AdminSidebar from "../../components/AdminSidebar";
 import axios from "axios";
-import { toast,ToastContainer } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css"; // This imports the default styles for Toastify
 
 
@@ -15,6 +15,8 @@ const NewCourse = () => {
   const [category, setCategory] = useState<"course" | "product">("course");
   const [level, setLevel] = useState<"Beginner" | "Intermediate" | "Advanced">("Beginner");
   const [students, setStudents] = useState<string[]>([]); // Array of student IDs
+  const [image, setImage] = useState<File | null>(null); // Add state for image
+  const [preview, setPreview] = useState<string | null>(null);
   // const [link, setLink] = useState<File[]>([]); // To store uploaded files
   const [sections, setSections] = useState([
     { id: uuidv4(), name: "", description: "", videos: [{ id: uuidv4(), name: "", description: "", link: "" }] },
@@ -24,61 +26,60 @@ const NewCourse = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
   
-    // Prepare the course data (no file uploads)
-    const courseData = {
-      title,
-      description,
-      instructor,
-      duration,
-      price,
-      category,
-      level,
-      students,
-      sections: sections.map((section) => ({
-        id: section.id,
-        name: section.name,
-        description: section.description,
-        videos: section.videos.map(({ id, name, description, link }) => ({
-          id,
-          name,
-          description,
-          link, // Include the link here
-        })),
-      })),
-    };
+    // Create a FormData object to handle binary file uploads
+    const formData = new FormData();
   
-    // Debug: Log the prepared courseData
-    console.log("Prepared courseData:", courseData);
+    // Append fields to FormData
+    formData.append("title", title);
+    formData.append("description", description);
+    formData.append("instructor", instructor);
+    formData.append("duration", duration?.toString() || "");
+    formData.append("price", price?.toString() || "");
+    formData.append("category", category);
+    formData.append("level", level);
+    formData.append("students", JSON.stringify(students));
+    if (image) {
+      formData.append("image", image); // Append the file
+    }
+    formData.append(
+      "sections",
+      JSON.stringify(
+        sections.map((section) => ({
+          id: section.id,
+          name: section.name,
+          description: section.description,
+          videos: section.videos.map(({ id, name, description, link }) => ({
+            id,
+            name,
+            description,
+            link,
+          })),
+        }))
+      )
+    );
   
     try {
-      const response = await axios.post("http://localhost:8080/create-course", courseData, {
+      const response = await axios.post("http://localhost:8080/create-course", formData, {
         headers: {
-          "Content-Type": "application/json", // Sending JSON data
+          "Content-Type": "multipart/form-data", // Required for file uploads
         },
       });
   
       // Show success notification
       toast.success("Course successfully created!", {
-        position: "top-right", // Use the string value directly
+        position: "top-right",
         autoClose: 5000,
-        hideProgressBar: true,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
       });
-      
-      
+  
       console.log("Course successfully created:", response.data);
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        // Show error notification
         toast.error(`Error: ${error.response?.data || error.message}`, {
           position: "top-right",
           autoClose: 5000,
         });
         console.error("Axios error:", error.response?.data || error.message);
       } else {
-        // Show general error notification
         toast.error("Unexpected error occurred!", {
           position: "top-right",
           autoClose: 5000,
@@ -88,6 +89,7 @@ const NewCourse = () => {
     }
   };
   
+
 
 
 
@@ -139,7 +141,7 @@ const NewCourse = () => {
     updatedSections[sectionIndex].videos[videoIndex][field] = value;
     setSections(updatedSections);
   };
-  
+
 
 
   const removeVideo = (sectionIndex: number, videoIndex: number) => {
@@ -148,6 +150,19 @@ const NewCourse = () => {
     setSections(updatedSections);
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+
   return (
     <div className="admin-container">
       <AdminSidebar />
@@ -155,6 +170,17 @@ const NewCourse = () => {
         <article>
           <form onSubmit={handleSubmit}>
             <h2>New Course</h2>
+            {/* Image */}
+            <div>
+              <label>Course Image</label>
+              <input type="file" accept="image/*" onChange={handleImageChange} />
+              {preview && (
+                <div>
+                  <p>Image Preview:</p>
+                  <img src={preview} alt="Course Preview" style={{ maxWidth: "200px", marginTop: "10px" }} />
+                </div>
+              )}
+            </div>
 
             {/* Title */}
             <div>

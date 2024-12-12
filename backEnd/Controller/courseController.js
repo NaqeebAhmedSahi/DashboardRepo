@@ -1,61 +1,108 @@
 
 const Course = require("../models/courseModel");
 const User = require("../models/User"); // Assuming your user model is named userModel
-
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs'); // For handling file deletion
 // Create a new course (Instructor only
+// Multer configuration
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/'); // Path to store uploaded files
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = `${Date.now()}-${file.originalname}`;
+    cb(null, uniqueName);
+  },
+});
+
+const upload = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+    if (!allowedTypes.includes(file.mimetype)) {
+      return cb(new Error('Only JPEG, PNG, and JPG files are allowed'), false);
+    }
+    cb(null, true);
+  },
+}).single('image'); // Field name in the form for the file upload
+
+
+// Updated createCourse function
 const createCourse = async (req, res) => {
-  try {
-    console.log('Received course data:', req.body); // Check if the data is coming through correctly
-
-    const { title, description, instructor, duration, price, category, level, sections } = req.body;
-
-    // Check if all required fields are provided
-    if (!title || !description || !instructor || !duration || !price || !category || !level || !sections) {
-      return res.status(400).json({ success: false, message: 'All required fields (including link) must be provided.' });
+  // Use Multer to handle file upload
+  upload(req, res, async (err) => {
+    if (err) {
+      return res.status(400).json({ success: false, message: 'File upload failed.', error: err.message });
     }
 
-    // Validate that price is a positive number
-    if (price <= 0) {
-      return res.status(400).json({ success: false, message: 'Price must be a positive number.' });
+    try {
+      const { title, description, instructor, duration, price, category, level, sections } = req.body;
+
+      // Check if all required fields are provided
+      if (!title || !description || !instructor || !duration || !price || !category || !level || !sections) {
+        return res.status(400).json({
+          success: false,
+          message: 'All required fields must be provided.',
+        });
+      }
+
+      // Validate that price is a positive number
+      if (price <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Price must be a positive number.',
+        });
+      }
+
+      // Parse sections if provided as a string
+      let parsedSections;
+      try {
+        parsedSections = typeof sections === 'string' ? JSON.parse(sections) : sections;
+      } catch (parseError) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid JSON format for sections.',
+        });
+      }
+
+      // Prepare the image data if a file was uploaded
+      const image = req.file
+        ? {
+            filename: req.file.filename,
+            url: `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`,
+          }
+        : null;
+
+      // Create a new course with the uploaded image details
+      const newCourse = new Course({
+        title,
+        description,
+        instructor,
+        duration,
+        price,
+        category,
+        level,
+        sections: parsedSections, // Use the parsed sections
+        image, // Add the image object
+      });
+
+      await newCourse.save();
+
+      res.status(201).json({
+        success: true,
+        message: 'Course added successfully.',
+        course: newCourse,
+      });
+    } catch (error) {
+      console.error('Error adding course:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to add course. Please try again later.',
+        error: error.message,
+      });
     }
-
-    // Remove the video link validation logic
-    // sections.forEach(section => {
-    //   section.videos.forEach(video => {
-    //     const videoLinkRegex = /^https:\/\/www\.youtube\.com\/watch\?v=[A-Za-z0-9_-]+$/;
-    //     if (!video.link || !videoLinkRegex.test(video.link)) {
-    //       return res.status(400).json({ success: false, message: `Invalid video link: ${video.link}` });
-    //     }
-    //   });
-    // });
-
-    // Save the course data without validating the video link
-    const newCourse = new Course({
-      title,
-      description,
-      instructor,
-      duration,
-      price,
-      category,
-      level,
-      sections, // Save the sections with videos, including the link as it is
-    });
-
-    await newCourse.save();
-
-    res.status(201).json({
-      success: true,
-      message: 'Course added successfully.',
-      course: newCourse,
-    });
-  } catch (error) {
-    console.error('Error adding course:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to add course. Please try again later.',
-      error: error.message,
-    });
-  }
+  });
 };
 
 
@@ -143,6 +190,7 @@ const getAllCourses = async (req, res) => {
   }
 };
 
+
 // Get details of a specific course by ID
 const getCourseById = async (req, res) => {
   try {
@@ -174,67 +222,108 @@ const getCourseById = async (req, res) => {
   }
 };
 
-// Update a course by ID (Instructor only)
+
+
 const updateCourseById = async (req, res) => {
-  const { id } = req.params;
-  const { title, description, instructor, duration, price, category, level, students, sections } = req.body;
-
-  try {
-    // Log the received data for debugging
-    console.log('Received data:', req.body);
-
-    // Validate the required fields
-    if (!title || !description || !instructor || !duration || !price || !category || !level) {
-      return res.status(400).json({
-        success: false,
-        message: 'Missing required fields',
-      });
+  // Use Multer to handle file upload
+  upload(req, res, async (err) => {
+    if (err) {
+      return res.status(400).json({ success: false, message: 'File upload failed.', error: err.message });
     }
 
-    // Find the course by ID and update it
-    const updatedCourse = await Course.findByIdAndUpdate(
-      id,
-      {
-        title,
-        description,
-        instructor,
-        duration,
-        price,
-        category,
-        level,
-        students,
-        sections,
-      },
-      { new: true, runValidators: true } // `new` returns the updated document, `runValidators` ensures validation
-    );
+    try {
+      const { title, description, instructor, duration, price, category, level, sections } = req.body;
+      const courseId = req.params.id;  // Course ID from the URL parameter
 
-    if (!updatedCourse) {
-      return res.status(404).json({
+      // Check if the course exists
+      const course = await Course.findById(courseId);
+      if (!course) {
+        return res.status(404).json({
+          success: false,
+          message: 'Course not found.',
+        });
+      }
+
+      // Check if all required fields are provided (only validate fields that are part of the update)
+      if (!title && !description && !instructor && !duration && !price && !category && !level && !sections) {
+        return res.status(400).json({
+          success: false,
+          message: 'At least one field must be provided for update.',
+        });
+      }
+
+      // Validate price if it's provided
+      if (price && price <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Price must be a positive number.',
+        });
+      }
+
+      // Parse sections if provided as a string
+      let parsedSections = course.sections; // Keep existing sections if none provided
+      if (sections) {
+        try {
+          parsedSections = typeof sections === 'string' ? JSON.parse(sections) : sections;
+        } catch (parseError) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid JSON format for sections.',
+          });
+        }
+      }
+
+      // Prepare the image data if a new file was uploaded
+      let image = course.image;  // Keep the existing image if no new file is uploaded
+      if (req.file) {
+        // Delete the old image from the file system
+        if (course.image && course.image.filename) {
+          const oldImagePath = `uploads/${course.image.filename}`;
+          if (fs.existsSync(oldImagePath)) {
+            fs.unlinkSync(oldImagePath); // Delete the file
+          }
+        }
+
+        image = {
+          filename: req.file.filename,
+          url: `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`,
+        };
+      }
+
+      // Update the course details with the new data
+      course.title = title || course.title;
+      course.description = description || course.description;
+      course.instructor = instructor || course.instructor;
+      course.duration = duration || course.duration;
+      course.price = price || course.price;
+      course.category = category || course.category;
+      course.level = level || course.level;
+      course.sections = parsedSections;  // Use the parsed sections
+      course.image = image;  // Update the image if a new one is uploaded
+
+      await course.save();
+
+      res.status(200).json({
+        success: true,
+        message: 'Course updated successfully.',
+        course,
+      });
+    } catch (error) {
+      console.error('Error updating course:', error);
+      res.status(500).json({
         success: false,
-        message: 'Course not found',
+        message: 'Failed to update course. Please try again later.',
+        error: error.message,
       });
     }
-
-    // Log updated course for debugging
-    console.log('Updated course:', updatedCourse);
-
-    // Send a success response with the updated course
-    return res.status(200).json({
-      success: true,
-      message: 'Course updated successfully!',
-      data: updatedCourse,
-    });
-  } catch (error) {
-    // Log any errors that occur during the update
-    console.error('Error updating course:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server Error. Please try again later.',
-      error: error.message, // Send error message back for debugging
-    });
-  }
-
+  });
 };
+
+
+
+
+
+
 
 
 // Get courses by category

@@ -25,9 +25,12 @@ const CourseSchema = new mongoose.Schema({
   price: { type: Number, required: true }, // Price of the course
   category: { type: String, enum: ["course", "product"], required: true }, // Category (course or product)
   level: { type: String, enum: ["Beginner", "Intermediate", "Advanced"], required: true }, // Course difficulty level
-  // link: { type: String, required: true }, // Link to the course
   students: { type: [String], default: [] }, // Array of student IDs (strings for now)
   sections: { type: [SectionSchema], required: true }, // Array of embedded sections with videos
+  image: {
+    filename: { type: String, required: false },
+    url: { type: String, required: false },
+  },
   createdAt: { type: Date, default: Date.now }, // Timestamp for creation
 });
 
