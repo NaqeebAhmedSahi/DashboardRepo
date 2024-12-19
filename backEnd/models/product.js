@@ -26,10 +26,10 @@ const ProductSchema = new Schema({
         required: false,
         default: 0,
     },
-    images: [{    
-        data: Buffer,
-        contentType: String
-    }],
+    image: {
+        filename: { type: String, required: false },
+        url: { type: String, required: false },
+      },
     brand: {
         type: String,
         required: false,
