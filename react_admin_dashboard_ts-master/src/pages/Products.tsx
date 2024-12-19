@@ -1,87 +1,160 @@
-import { useState, useEffect } from "react";
-import axios from "axios";
+import { ReactElement, useCallback, useEffect, useState } from "react";
 import AdminSidebar from "../components/AdminSidebar";
 import TableHOC from "../components/TableHOC";
 import { Column } from "react-table";
+import { FaPlus, FaTrashAlt, FaEdit } from "react-icons/fa";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
-import { FaPlus } from "react-icons/fa";
 
 interface DataType {
-  photo: React.ReactElement;
   name: string;
   description: string;
-  price: number;
   stock: number;
-  category: string;
+  price: number;
+  category: "course" | "product";
   brand: string;
+  image: string; // Added image field
   averageRating: number;
   numOfReviews: number;
   createdAt: string;
-  action: React.ReactElement;
+  action: ReactElement;
 }
 
 const columns: Column<DataType>[] = [
-  { Header: "Photo", accessor: "photo" },
-  { Header: "Name", accessor: "name" },
-  { Header: "Description", accessor: "description" },
-  { Header: "Price", accessor: "price" },
-  { Header: "Stock", accessor: "stock" },
-  { Header: "Category", accessor: "category" },
-  { Header: "Brand", accessor: "brand" },
-  { Header: "Rating", accessor: "averageRating" },
-  { Header: "Reviews", accessor: "numOfReviews" },
-  { Header: "Created At", accessor: "createdAt" },
-  { Header: "Action", accessor: "action" },
+  {
+    Header: "Image",
+    accessor: "image",
+    Cell: ({ value }) => (
+      <img
+        src={value}
+        alt="Course"
+        style={{ width: "50px", height: "50px", objectFit: "cover" }}
+      />
+    ), // Displaying the image
+  },
+  {
+    Header: "name",
+    accessor: "name",
+  },
+  {
+    Header: "Description",
+    accessor: "description",
+  },
+  {
+    Header: "stock",
+    accessor: "stock",
+  },
+  {
+    Header: "Price",
+    accessor: "price",
+  },
+  {
+    Header: "Category",
+    accessor: "category",
+  },
+  {
+    Header: "brand",
+    accessor: "brand",
+  },
+  {
+    Header: "averageRating",
+    accessor: "averageRating",
+  },
+  {
+    Header: "createdAt",
+    accessor: "createdAt",
+  },
+  {
+    Header: "Action",
+    accessor: "action",
+  }
 ];
 
 const Products = () => {
   const [data, setData] = useState<DataType[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  const fetchProducts = async () => {
+    try {
+      const response = await axios.get("http://localhost:8080/getProducts");
+  
+      // Log the fetched data
+      console.log("Fetched courses data:", response.data);
+  
+      const fetchProducts = response.data.map((products: any) => {
+        // Handle cases where image is null or has the object format
+        const imageUrl = products.image?.url || "http://localhost:8080/default-image.jpg";
+  
+        // Log each processed image URL
+        console.log("Processed Course Image URL:", imageUrl);
+  
+        return {
+          name: products.name,
+          description: products.description,
+          stock: products.stock,
+          price: products.price,
+          category: products.category,
+          brand: products.brand,
+          image: imageUrl,
+          averageRating: products.averageRating,
+          // numOfReviews: products.numOfReviews,
+          createdAt: products.createdAt,
+         // Ensure a valid image URL
+          action: (
+            <div className="action-buttons">
+              <button
+                onClick={() =>
+                  navigate(`/admin/product/${products._id}`, {
+                    state: { products: products },
+                  })
+                }
+                className="update-button"
+              >
+                <FaEdit />
+              </button>
+              <button
+                onClick={() => handleDelete(products._id)}
+                className="delete-button"
+              >
+                <FaTrashAlt />
+              </button>
+            </div>
+          ),
+        };
+      });
+  
+    setData(fetchProducts);
+    } catch (error) {
+      console.error("Error fetching Products:", error);
+    }
+  };
+  
+  
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const response = await axios.get("http://localhost:8080/getProducts");
-        console.log(response.data);
-
-        const products = response.data.products.map((product: any) => ({
-          photo: <img src={product.photoUrl} alt={product.name} />,
-          name: product.name,
-          description: product.description,
-          price: product.price,
-          stock: product.stock,
-          category: product.category,
-          brand: product.brand,
-          averageRating: product.averageRating,
-          numOfReviews: product.numOfReviews,
-          createdAt: new Date(product.createdAt).toLocaleDateString(),
-          action: <Link to={`/admin/product/${product._id}`}>Manage</Link>,
-        }));
-
-        setData(products);
-      } catch (err) {
-        setError("Failed to fetch products");
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchProducts();
-  }, []);
+  }, [navigate]);
 
-  const Table = TableHOC<DataType>(columns, data, "dashboard-product-box", "Products", true);
+  const handleDelete = async (productId: string) => {
+    try {
+      const response = await axios.delete(
+        `http://localhost:8080/deleteProduct/${productId}`
+      );
+      alert(response.data.message);
+      fetchProducts();
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      alert("Failed to delete product. Please try again.");
+    }
+  };
 
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p>{error}</p>;
+  const Table = useCallback(TableHOC<DataType>(columns, data, "dashboard-product-box", "Products", true), [data]);
 
   return (
     <div className="admin-container">
       <AdminSidebar />
-      <main className="products">
-        <Table /> {/* Corrected here */}
-      </main>
+      <main className="products">{Table()}</main>
       <Link to="/admin/product/new" className="create-product-btn">
         <FaPlus />
       </Link>

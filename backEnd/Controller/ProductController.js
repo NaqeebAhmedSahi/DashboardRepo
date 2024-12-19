@@ -1,49 +1,67 @@
 // controllers/productController.js
 const Product = require('../models/product');
 const Review = require('../models/reviews');
+const multer = require('multer');
+const path = require('path');
 
 // Get all products with filters
+// const getProducts = async (req, res) => {
+//   try {
+//     const { category, minPrice, maxPrice, minRating, maxRating } = req.query;
+
+//     // Create a filter object
+//     let filter = {};
+
+//     // Add category filter if provided
+//     if (category) {
+//       filter.category = category;
+//     }
+
+//     // Add price range filter if provided
+//     if (minPrice || maxPrice) {
+//       filter.price = {};
+//       if (minPrice) {
+//         filter.price.$gte = minPrice; // Price greater than or equal to minPrice
+//       }
+//       if (maxPrice) {
+//         filter.price.$lte = maxPrice; // Price less than or equal to maxPrice
+//       }
+//     }
+
+//     // Add rating range filter if provided
+//     if (minRating || maxRating) {
+//       filter.rating = {};
+//       if (minRating) {
+//         filter.rating.$gte = minRating; // Rating greater than or equal to minRating
+//       }
+//       if (maxRating) {
+//         filter.rating.$lte = maxRating; // Rating less than or equal to maxRating
+//       }
+//     }
+
+//     // Fetch products based on the filters
+//     const products = await Product.find(filter);
+
+//     // Respond with the filtered products
+//     res.status(200).json({ success: true, count: products.length, products });
+//   } catch (error) {
+//     res.status(500).json({ success: false, message: 'Server error' });
+//   }
+// };
 const getProducts = async (req, res) => {
   try {
-    const { category, minPrice, maxPrice, minRating, maxRating } = req.query;
+    // Fetch all courses from the database
+    const products = await Product.find();
 
-    // Create a filter object
-    let filter = {};
-
-    // Add category filter if provided
-    if (category) {
-      filter.category = category;
-    }
-
-    // Add price range filter if provided
-    if (minPrice || maxPrice) {
-      filter.price = {};
-      if (minPrice) {
-        filter.price.$gte = minPrice; // Price greater than or equal to minPrice
-      }
-      if (maxPrice) {
-        filter.price.$lte = maxPrice; // Price less than or equal to maxPrice
-      }
-    }
-
-    // Add rating range filter if provided
-    if (minRating || maxRating) {
-      filter.rating = {};
-      if (minRating) {
-        filter.rating.$gte = minRating; // Rating greater than or equal to minRating
-      }
-      if (maxRating) {
-        filter.rating.$lte = maxRating; // Rating less than or equal to maxRating
-      }
-    }
-
-    // Fetch products based on the filters
-    const products = await Product.find(filter);
-
-    // Respond with the filtered products
-    res.status(200).json({ success: true, count: products.length, products });
+    // Return the products as a response
+    res.status(200).json(products);
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('Error fetching products:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch products. Please try again later.',
+      error: error.message,
+    });
   }
 };
 
@@ -63,13 +81,69 @@ const getProductById = async (req, res) => {
 };
 
 //     Add a new product
-const addProduct = async (req, res) => {
-  try {
-    const product = await Product.create(req.body);
-    res.status(201).json({ success: true, product });
-  } catch (error) {
-    res.status(400).json({ success: false, message: `Error creating product ${error}` });
-  }
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/'); // Specify the folder for storing images
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname)); // Append a unique suffix to avoid name conflicts
+  },
+});
+
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB file size limit
+  fileFilter: (req, file, cb) => {
+    const fileTypes = /jpeg|jpg|png/; // Allow only specific file types
+    const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimeType = fileTypes.test(file.mimetype);
+
+    if (extname && mimeType) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only images (jpeg, jpg, png) are allowed.'));
+    }
+  },
+}).single('image'); // Single image upload with the field name 'image'
+
+// Controller function
+const addProduct = (req, res) => {
+  upload(req, res, async (err) => {
+    if (err) {
+      return res.status(400).json({ error: err.message });
+    }
+
+    const { name, description, price, category, stock, brand, ratings } = req.body;
+
+    try {
+      // Create a new product object
+      const newProduct = new Product({
+        name,
+        description,
+        price: parseFloat(price),
+        category,
+        stock: parseInt(stock, 10),
+        brand,
+        averageRating: ratings ? parseFloat(ratings) : 0,
+      });
+
+      // Add image details if an image was uploaded
+      if (req.file) {
+        newProduct.image = {
+          filename: req.file.filename,
+          url: `http://localhost:8080/uploads/${req.file.filename}`, // Set the accessible URL for the image
+        };
+      }
+
+      // Save the product to the database
+      const savedProduct = await newProduct.save();
+      res.status(201).json({ success: true, product: savedProduct });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ success: false, error: 'Failed to add product.' });
+    }
+  });
 };
 
 //    Update a product by ID
@@ -92,6 +166,7 @@ const updateProduct = async (req, res) => {
 
 //    Delete a product by ID
 const deleteProduct = async (req, res) => {
+  console.log(req.params.id);
   try {
     const product = await Product.findByIdAndDelete(req.params.id);
 

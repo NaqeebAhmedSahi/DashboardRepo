@@ -25,13 +25,15 @@ router.get('/:id/reviews', getProductReviews);
 
 // Admin-only routes
 // router.post('/addProduct', protectC, isAdmin, multerMiddleware, addProduct); // Add multerMiddleware here
-router.post('/addProduct', multerMiddleware, addProduct); // Add multerMiddleware here
+// router.post('/addProduct', multerMiddleware, addProduct); // Add multerMiddleware here
+router.post('/addProduct', addProduct); // Add multerMiddleware here
 router.put('/:id', protectC, isAdmin, updateProduct);
-router.delete('/:id', protectC, isAdmin, deleteProduct);
+// router.delete('/:id', protectC, isAdmin, deleteProduct);
+router.delete('/deleteProduct/:id', deleteProduct);
 
 // Review routes
 router.post('/:id/review', protectC, addReview);
 router.put('/:id/reviews/:reviewId', protectC, isAdmin, updateReview);
-router.delete('/:id/reviews/:reviewId', protectC, isAdmin, deleteReview);
+// router.delete('/:id/reviews/:reviewId', protectC, isAdmin, deleteReview);
 
 module.exports = router;

@@ -9,17 +9,23 @@ const NewProduct = () => {
   const [category, setCategory] = useState<string>("");
   const [stock, setStock] = useState<number>();
   const [brand, setBrand] = useState<string>("");
-  const [photo, setPhoto] = useState<File | null>(null);
+  const [image, setImage] = useState<File | null>(null); // Add state for image
+  const [preview, setPreview] = useState<string | null>(null);
   const [ratings, setRatings] = useState<number>();
 
   const [submittedData, setSubmittedData] = useState<any>(null);
 
   const categories = ["Electronics", "Home Appliances", "Clothing", "Books", "Toys"];
 
-  const changeImageHandler = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setPhoto(file);
+      setImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -35,7 +41,7 @@ const NewProduct = () => {
       stock,
       brand,
       ratings,
-      images: photo ? photo.name : null,
+      images: image ? image.name : null,
     };
 
     // Display JSON in the console
@@ -51,8 +57,8 @@ const NewProduct = () => {
       formData.append("brand", brand);
       formData.append("ratings", ratings?.toString() || "");
 
-      if (photo) {
-        formData.append("courseImage", photo);
+      if (image) {
+        formData.append("image", image); // Append the file
       }
 
       const response = await axios.post("http://localhost:8080/addProduct", formData, {
@@ -79,16 +85,14 @@ const NewProduct = () => {
 
             {/* Main Photo */}
             <div>
-              <label>Main Image</label>
-              {photo && <img src={URL.createObjectURL(photo)} alt={name} />}
-            </div>
-            <div>
-              <input
-                required
-                type="file"
-                placeholder="Choose Main Photo"
-                onChange={changeImageHandler}
-              />
+              <label>Product Image</label>
+              <input type="file" accept="image/*" onChange={handleImageChange} />
+              {preview && (
+                <div>
+                  <p>Image Preview:</p>
+                  <img src={preview} alt="Product Preview" style={{ maxWidth: "200px", marginTop: "10px" }} />
+                </div>
+              )}
             </div>
 
             {/* Product Name */}
