@@ -1,146 +1,236 @@
-import { ChangeEvent, FormEvent, useState } from "react";
+import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import AdminSidebar from "../../components/AdminSidebar";
+import axios from "axios";
 
-const img =
-	"https://images.unsplash.com/photo-1542291026-7eec264c27ff?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2hvZXN8c2hvZXN8ZW58MHx8MHx8&w=1000&q=804";
+const NewProduct = () => {
+  const { id } = useParams(); // Get the product ID from the URL
 
-const ProductManagemnet = () => {
-	const [name, setName] = useState<string>("Puma Shoes");
-	const [price, setPrice] = useState<number>(1399);
-	const [stock, setStock] = useState<number>(12);
-	const [photo, setPhoto] = useState<string>(img);
-	const [brand, setBrand] = useState<string>("Puma");
-	const [description, setDescription] = useState<string>("High-quality Puma shoes for sports and casual wear.");
-	const [category, setCategory] = useState<string>("Footwear");
+  // State variables
+  const [name, setName] = useState<string>("");
+  const [description, setDescription] = useState<string>("");
+  const [price, setPrice] = useState<number | string>(""); // Allow empty value for initialization
+  const [category, setCategory] = useState<string>("");
+  const [stock, setStock] = useState<number | string>(""); // Allow empty value for initialization
+  const [brand, setBrand] = useState<string>("");
+  const [image, setImage] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [ratings, setRatings] = useState<number | string>(""); // Allow empty value for initialization
 
-	const [nameUpdate, setNameUpdate] = useState<string>("Puma Shoes");
-	const [priceUpdate, setPriceUpdate] = useState<number>(1399);
-	const [stockUpdate, setStockUpdate] = useState<number>(12);
-	const [photoUpdate, setPhotoUpdate] = useState<string>(img);
-	const [brandUpdate, setBrandUpdate] = useState<string>("Puma");
-	const [descriptionUpdate, setDescriptionUpdate] = useState<string>("High-quality Puma shoes for sports and casual wear.");
-	const [categoryUpdate, setCategoryUpdate] = useState<string>("Footwear");
+  const [submittedData, setSubmittedData] = useState<any>(null);
 
-	const categories = ["Electronics", "Home Appliances", "Clothing", "Books", "Toys"]; // Categories for dropdown
+  const categories = ["Electronics", "Home Appliances", "Clothing", "Books", "Toys"];
 
-	const changeImageHandler = (e: ChangeEvent<HTMLInputElement>) => {
-		const file: File | undefined = e.target.files?.[0];
-		const reader: FileReader = new FileReader();
-		if (file) {
-			reader.readAsDataURL(file);
-			reader.onloadend = () => {
-				if (typeof reader.result === "string") setPhotoUpdate(reader.result);
-			};
-		}
-	};
+  // Fetch product details when component mounts
+  useEffect(() => {
+    if (id) {
+      const fetchProductDetails = async () => {
+        try {
+          const response = await axios.get(`http://localhost:8080/getProductById/${id}`);
+          const product = response.data.product;
+          console.log(product);
 
-	const submitHandler = (e: FormEvent<HTMLFormElement>) => {
-		e.preventDefault();
-		setName(nameUpdate);
-		setPrice(priceUpdate);
-		setStock(stockUpdate);
-		setPhoto(photoUpdate);
-		setBrand(brandUpdate);
-		setDescription(descriptionUpdate);
-		setCategory(categoryUpdate);
-	};
+          // Populate state with product data
+          setName(product.name || "");
+          setDescription(product.description || "");
+          setPrice(product.price || "");
+          setCategory(product.category || "");
+          setStock(product.stock || "");
+          setBrand(product.brand || "");
+          setRatings(product.averageRating || "");
 
-	return (
-		<div className="admin-container">
-			<AdminSidebar />
-			<main className="product-management">
-				<section>
-					<strong>ID - Prdouct-101</strong>
-					<img src={photo} alt={name} />
-					<p>{name}</p>
-					{stock > 0 ? <span className="green">{stock} Available</span> : <span className="red">Not Available</span>}
-					<h3>${price}</h3>
-					<p><strong>Description:</strong> {description}</p>
-					<p><strong>Brand:</strong> {brand}</p>
-					<p><strong>Category:</strong> {category}</p>
-					<p><strong>Stock:</strong> {stock} units</p>
-				</section>
-				<article>
-					<form onSubmit={submitHandler}>
-						<h2>Manage Product</h2>
-						{photoUpdate && <img src={photoUpdate} alt={nameUpdate} />}
-						<div>
-							<label style={{ backgroundColor: "transparent", top: "-1.5rem" }}>Choose Photo</label>
-							<input required type="file" placeholder="Choose Photo" onChange={changeImageHandler} />
-						</div>
-						<div>
-							<label>Name</label>
-							<input required type="text" placeholder="Name" value={nameUpdate} onChange={(e) => setNameUpdate(e.target.value)} />
-						</div>
-						<div>
-							<label>Description</label>
-							<textarea
-								required
-								value={descriptionUpdate}
-								onChange={(e) => setDescriptionUpdate(e.target.value)}
-								style={{
-									width: "100%",
-									height: "150px",
-									padding: "16px"
-								}}
-							/>
-						</div>
-						<div>
-							<label>Price</label>
-							<input
-								required
-								type="number"
-								placeholder="Price"
-								value={priceUpdate}
-								onChange={(e) => setPriceUpdate(Number(e.target.value))}
-							/>
-						</div>
-						<div>
-							<label>Stock</label>
-							<input
-								required
-								type="number"
-								placeholder="Stock"
-								value={stockUpdate}
-								onChange={(e) => setStockUpdate(Number(e.target.value))}
-							/>
+          if (product.image.url) {
+            setPreview(product.image.url);
+          }
+        } catch (error) {
+          console.error("Error fetching product details:", error);
+        }
+      };
 
-						</div>
-						<div>
-							<label>Category</label>
-							<select
-								className="dropdown"
-								required
-								value={categoryUpdate}
-								onChange={(e) => setCategoryUpdate(e.target.value)}
-								style={{
-									width: "100%",
-									height:"49px",
-									padding:"16px"
-								}} // Handle category update
-							>
-								{categories.map((category, index) => (
-									<option key={index} value={category}>
-										{category}
-									</option>
-								))}
-							</select>
-						</div>
-						<div>
-							<label>Brand</label>
-							<input
-								required
-								type="text"
-								value={brandUpdate}
-								onChange={(e) => setBrandUpdate(e.target.value)}
-							/>
-						</div>
-						<button type="submit">Update Product</button>
-					</form>
-				</article>
-			</main>
-		</div>
-	);
+      fetchProductDetails();
+    }
+  }, [id]);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const productData = {
+      name,
+      description,
+      price,
+      category,
+      stock,
+      brand,
+      ratings,
+      images: image ? image.name : null,
+    };
+
+    console.log("Form Data as JSON:", productData);
+
+    try {
+      const formData = new FormData();
+      formData.append("name", name);
+      formData.append("description", description);
+      formData.append("price", price?.toString() || "");
+      formData.append("category", category);
+      formData.append("stock", stock?.toString() || "");
+      formData.append("brand", brand);
+      formData.append("ratings", ratings?.toString() || "");
+
+      if (image) {
+        formData.append("image", image);
+      }
+
+      const response = await axios.post("http://localhost:8080/addProduct", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      console.log(response.data);
+      setSubmittedData(response.data.product);
+    } catch (error) {
+      console.error("Error submitting data", error);
+    }
+  };
+
+  return (
+    <div className="admin-container">
+      <AdminSidebar />
+      <main className="product-management">
+        <article>
+          <form onSubmit={handleSubmit}>
+            <h2>{id ? "Edit Product" : "New Product"}</h2>
+
+            {/* Main Photo */}
+            <div>
+              <label>Product Image</label>
+              {/* <input type="file" accept="image/*" onChange={handleImageChange} /> */}
+              {preview && (
+                <div>
+                  {/* <p>Image Preview:</p> */}
+                  <img className="mt-6" src={preview} alt="Product Preview" style={{ maxWidth: "200px", marginTop: "10px" }} />
+                </div>
+              )}
+            </div>
+
+            {/* Product Name */}
+            <div>
+              <label>Name</label>
+              <input
+                required
+                type="text"
+                placeholder="Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+
+            {/* Description */}
+            <div>
+              <label>Description</label>
+              <textarea
+                required
+                placeholder="Description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                style={{ width: "100%", height: "150px", padding: "16px" }}
+              />
+            </div>
+
+            {/* Price */}
+            <div>
+              <label>Price</label>
+              <input
+                required
+                type="number"
+                placeholder="Price"
+                value={price}
+                onChange={(e) => setPrice(Number(e.target.value))}
+              />
+            </div>
+
+            {/* Category */}
+            <div>
+              <label>Category</label>
+              <select
+                className="dropdown"
+                required
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                style={{ width: "100%", height: "49px", padding: "16px" }}
+              >
+                {categories.map((category, index) => (
+                  <option key={index} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Brand */}
+            <div>
+              <label>Brand</label>
+              <input
+                required
+                type="text"
+                placeholder="Brand"
+                value={brand}
+                onChange={(e) => setBrand(e.target.value)}
+              />
+            </div>
+
+            {/* Stock */}
+            <div>
+              <label>Stock</label>
+              <input
+                required
+                type="number"
+                placeholder="Stock"
+                value={stock}
+                onChange={(e) => setStock(Number(e.target.value))}
+              />
+            </div>
+
+            {/* Ratings */}
+            <div>
+              <label>Ratings (1-5)</label>
+              <input
+                type="number"
+                placeholder="Ratings"
+                value={ratings}
+                onChange={(e) => setRatings(Number(e.target.value))}
+                min={1}
+                max={5}
+              />
+            </div>
+
+            <button type="submit">{id ? "Update Product" : "Create Product"}</button>
+          </form>
+
+          {/* Display submitted data */}
+          {submittedData && (
+            <div>
+              <h3>Product Submitted:</h3>
+              <pre>{JSON.stringify(submittedData, null, 2)}</pre>
+            </div>
+          )}
+        </article>
+      </main>
+    </div>
+  );
 };
 
-export default ProductManagemnet;
+export default NewProduct;
