@@ -1,22 +1,24 @@
-require('dotenv').config()
+require('dotenv').config();
 
 const express = require('express');
 const cors = require("cors");
 const bodyParser = require('body-parser');
 const app = express();
-const connectToMongo = require('./connection/connection.js')
-require('dotenv').config()
+const connectToMongo = require('./connection/connection.js');
+require('dotenv').config();
 
 //calling paths
 const userRouter = require('./Router/User.js');
-const courseRoutes = require('./Router/courseRouter.js'); // Correct path to your router
-const adminRoutes = require('./Router/adminRouter.js')
+const courseRoutes = require('./Router/courseRouter.js');
+const adminRoutes = require('./Router/adminRouter.js');
 const productRoutes = require('./Router/ProductRouter.js');
 const notificationRoutes = require('./Router/notification.js');
-const blogRoutes = require('./Router/blogRouter.js')
-const contactRouter = require('./Router/contactRouter.js')
-const Wishlist = require('./Router/wishlistRouter.js')
-const cvFormRouter = require('./Router/cvFormRouter.js')
+const blogRoutes = require('./Router/blogRouter.js');
+const contactRouter = require('./Router/contactRouter.js');
+const Wishlist = require('./Router/wishlistRouter.js');
+const cvFormRouter = require('./Router/cvFormRouter.js');
+const counterRoutes = require('./Router/counterRouter.js');
+
 
 //calling middlewares
 app.use(cors());
@@ -27,27 +29,31 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Route to handle POST requests for contact
-app.post("/contact", contactRouter); 
+app.post("/contact", contactRouter);
 // blog routes
-app.use('/', blogRoutes)
+app.use('/', blogRoutes);
 
 //Wishlish
-app.use('/wishlists', Wishlist)
+app.use('/wishlists', Wishlist);
 
 // notifications
 app.use('/notifications', notificationRoutes);
 
 // product routes
-app.use('/', productRoutes)
+app.use('/', productRoutes);
 
 // Admin routes
-app.use('/',adminRoutes)
+app.use('/',adminRoutes);
 
 // Authentication & User Managemenst
-app.use('/',userRouter)
+app.use('/',userRouter);
 
 // Course Management
-app.use('/',courseRoutes)
+app.use('/',courseRoutes);
+
+// Counter Management
+app.use('/',counterRoutes);
+
 
 
 // Use the job application routes
