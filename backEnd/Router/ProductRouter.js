@@ -17,7 +17,7 @@ const {
 
 // Public routes
 router.get('/getProducts', getProducts);
-router.get('/:id', getProductById);
+router.get('/getProductById/:id', getProductById);
 router.get('/category/:category', getProductsByCategory);
 router.get('/:id/reviews', getProductReviews);
 // Add this new route
