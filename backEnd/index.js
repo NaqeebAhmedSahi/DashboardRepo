@@ -54,8 +54,6 @@ app.use('/',courseRoutes);
 // Counter Management
 app.use('/',counterRoutes);
 
-
-
 // Use the job application routes
 app.use('/cvForm', cvFormRouter);
 // Serve static files
