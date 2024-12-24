@@ -3,6 +3,8 @@ const Product = require('../models/product');
 const Review = require('../models/reviews');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs'); // For handling file deletion
+
 
 // Get all products with filters
 // const getProducts = async (req, res) => {
@@ -148,22 +150,107 @@ const addProduct = (req, res) => {
 };
 
 //    Update a product by ID
+// const updateProduct = async (req, res) => {
+//   try {
+//     const product = await Product.findByIdAndUpdate(req.params.id, req.body, {
+//       new: true,
+//       runValidators: true,
+//     });
+
+//     if (!product) {
+//       return res.status(404).json({ success: false, message: 'Product not found' });
+//     }
+
+//     res.status(200).json({ success: true, product });
+//   } catch (error) {
+//     res.status(400).json({ success: false, message: 'Error updating product' });
+//   }
+// };
+
 const updateProduct = async (req, res) => {
-  try {
-    const product = await Product.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
-
-    if (!product) {
-      return res.status(404).json({ success: false, message: 'Product not found' });
+  // Use Multer to handle file upload
+  upload(req, res, async (err) => {
+    if (err) {
+      return res.status(400).json({ success: false, message: 'File upload failed.', error: err.message });
     }
+    console.log("Body", req.body);
+    try {
+      const { name, description, price, category, stock, brand, ratings } = req.body;
+      const productId = req.params.id; // Product ID from the URL parameter
 
-    res.status(200).json({ success: true, product });
-  } catch (error) {
-    res.status(400).json({ success: false, message: 'Error updating product' });
-  }
+      // Check if the product exists
+      const product = await Product.findById(productId);
+      if (!product) {
+        return res.status(404).json({
+          success: false,
+          message: 'Product not found.',
+        });
+      }
+
+      // Check if at least one field is provided for the update
+      if (!name && !description && !price && !category && !stock && !brand && !ratings) {
+        return res.status(400).json({
+          success: false,
+          message: 'At least one field must be provided for update.',
+        });
+      }
+
+      // Validate price if provided
+      if (price && price <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Price must be a positive number.',
+        });
+      }
+
+      // Prepare the image data if a new file was uploaded
+      let image = product.image; // Keep the existing image if no new file is uploaded
+      if (req.file) {
+        // Delete the old image from the file system
+        if (product.image && product.image.filename) {
+          const oldImagePath = `uploads/${product.image.filename}`;
+          if (fs.existsSync(oldImagePath)) {
+            fs.unlinkSync(oldImagePath); // Delete the file
+          }
+        }
+
+        image = {
+          filename: req.file.filename,
+          url: `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`,
+        };
+      }
+
+      // Update the product details with the new data
+      product.name = name || product.name;
+      product.description = description || product.description;
+      product.price = price || product.price;
+      product.category = category || product.category;
+      product.stock = stock || product.stock;
+      product.brand = brand || product.brand;
+      product.ratings = ratings || product.ratings;
+      product.image = image; // Update the image if a new one is uploaded
+
+      await product.save();
+
+      res.status(200).json({
+        success: true,
+        message: 'Product updated successfully.',
+        product,
+      });
+    } catch (error) {
+      console.error('Error updating product:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to update product. Please try again later.',
+        error: error.message,
+      });
+    }
+  });
 };
+
+module.exports = updateProduct;
+
+
 
 //    Delete a product by ID
 const deleteProduct = async (req, res) => {

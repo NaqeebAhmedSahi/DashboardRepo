@@ -27,7 +27,7 @@ router.get('/:id/reviews', getProductReviews);
 // router.post('/addProduct', protectC, isAdmin, multerMiddleware, addProduct); // Add multerMiddleware here
 // router.post('/addProduct', multerMiddleware, addProduct); // Add multerMiddleware here
 router.post('/addProduct', addProduct); // Add multerMiddleware here
-router.put('/:id', protectC, isAdmin, updateProduct);
+router.put('/updateProduct/:id',  updateProduct);
 // router.delete('/:id', protectC, isAdmin, deleteProduct);
 router.delete('/deleteProduct/:id', deleteProduct);
 
