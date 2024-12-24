@@ -93,11 +93,9 @@ const NewProduct = () => {
         formData.append("image", image);
       }
 
-      const response = await axios.post("http://localhost:8080/addProduct", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+     const response = await axios.put(`http://localhost:8080/updateProduct/${id}`, formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+          });
 
       console.log(response.data);
       setSubmittedData(response.data.product);
@@ -117,7 +115,7 @@ const NewProduct = () => {
             {/* Main Photo */}
             <div>
               <label>Product Image</label>
-              {/* <input type="file" accept="image/*" onChange={handleImageChange} /> */}
+              <input type="file" accept="image/*" onChange={handleImageChange} />
               {preview && (
                 <div>
                   {/* <p>Image Preview:</p> */}
